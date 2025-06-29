@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>員工個人行程表</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", sans-serif;
+      background: var(--bg, #f4f6fa);
+      margin: 0; padding: 0;
+      transition: background 0.3s;
+    }
+    .theme-toggle {
+      position: fixed; top: 16px; right: 24px; z-index: 10;
+      background: #fff; border: 1px solid #e3e8f0; border-radius: 20px;
+      padding: 6px 18px; font-size: 1em; color: #357abd; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(74,144,226,0.08);
+      transition: background 0.2s, color 0.2s;
+    }
+    .theme-toggle.dark { background: #222; color: #ffe082; border-color: #444; }
+    .container {
+      max-width: 900px; margin: 40px auto 32px auto;
+      background: var(--card, #fff);
+      border-radius: 18px;
+      box-shadow: 0 4px 24px rgba(74,144,226,0.13);
+      padding: 36px 18px 28px 18px;
+      transition: background 0.3s;
+    }
+    .title {
+      font-size: 1.6em; font-weight: bold; color: #357abd;
+      margin-bottom: 18px; letter-spacing: 1px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .title .icon {
+      font-size: 1.2em; color: #4a90e2;
+    }
+    .select-row label, .week-label {
+      font-size: 1.1em; color: #2d3e50; margin-right: 8px;
+    }
+    .select-row select, .select-row input, .week-select {
+      font-size: 1em; padding: 4px 10px; border-radius: 5px;
+      border: 1px solid #b0c4d8; background: #fff; color: #2d3e50; margin-right: 8px;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+    .select-row input:focus, .week-select:focus, .day-row input:focus {
+      border-color: #4a90e2; box-shadow: 0 0 0 2px #eaf3fb;
+    }
+    .btn {
+      background: linear-gradient(90deg,#4a90e2 60%,#357abd 100%);
+      color: #fff; border: none; border-radius: 8px;
+      padding: 8px 22px; font-size: 1em; cursor: pointer;
+      margin-left: 8px; box-shadow: 0 1px 4px rgba(74,144,226,0.08);
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:hover { background: #357abd; transform: translateY(-2px) scale(1.04); }
+    .day-block {
+      background: var(--card, #fff);
+      border-radius: 14px;
+      margin-bottom: 32px;
+      box-shadow: 0 2px 12px rgba(74,144,226,0.10);
+      padding: 18px 16px 16px 16px;
+      transition: background 0.3s;
+      border-left: 6px solid #4a90e2;
+    }
+    .day-title {
+      font-weight: bold; font-size: 1.13em; color: #357abd;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .day-title .icon { font-size: 1.1em; }
+    .day-row {
+      display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap;
+      align-items: center;
+    }
+    .day-row label {
+      min-width: 70px; color: #2d3e50; font-size: 1em; font-weight: 500;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .day-row input {
+      font-size: 1em; padding: 4px 10px; border-radius: 6px;
+      border: 1.5px solid #e3e8f0; background: #f9fbfd; color: #2d3e50;
+      width: 120px; transition: border 0.2s, box-shadow 0.2s;
+    }
+    .day-row input:focus { border-color: #4a90e2; box-shadow: 0 0 0 2px #eaf3fb; background: #fff; }
+    .routes-table {
+      width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 8px;
+      background: #f9fbfd; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(74,144,226,0.06);
+    }
+    .routes-table th, .routes-table td {
+      border: 1px solid #e3e8f0; padding: 9px 7px; text-align: center; font-size: 1em;
+      background: #f9fbfd;
+    }
+    .routes-table th {
+      background: #eaf3fb; color: #357abd; font-weight: 600; font-size: 1.08em;
+      letter-spacing: 1px;
+    }
+    .routes-table td input {
+      width: 98%; border-radius: 5px; border: 1px solid #e3e8f0; background: #fff;
+      padding: 4px 8px; font-size: 1em; transition: border 0.2s;
+    }
+    .routes-table td input:focus { border-color: #4a90e2; background: #f4f8ff; }
+    .add-route-btn, .remove-route-btn {
+      background: linear-gradient(90deg,#e74c3c 60%,#c0392b 100%);
+      color: #fff; border: none; border-radius: 6px; padding: 4px 16px;
+      font-size: 0.98em; cursor: pointer; margin-left: 4px; transition: background 0.2s, transform 0.1s;
+    }
+    .add-route-btn { background: linear-gradient(90deg,#4a90e2 60%,#357abd 100%); margin-left: 0; }
+    .add-route-btn:hover, .remove-route-btn:hover { background: #357abd; transform: scale(1.05); }
+    .remove-route-btn { background: linear-gradient(90deg,#e74c3c 60%,#c0392b 100%); }
+    .remove-route-btn:hover { background: #c0392b; }
+    .refuel-label {
+      color: #e67e22; font-weight: bold; margin-left: 12px; display: flex; align-items: center; gap: 4px;
+    }
+    .refuel-label input[type=checkbox]:checked + .icon { color: #e67e22; }
+    .refuel-fields { display: inline-flex; gap: 8px; align-items: center; margin-left: 8px; }
+    .refuel-fields input { width: 80px; }
+    .day-row input[readonly] { background: #f4f6fa; color: #888; }
+    @media (max-width: 700px) {
+      .container { padding: 0 2px; }
+      .day-row label { min-width: 50px; }
+      .day-row input { width: 80px; }
+      .routes-table th, .routes-table td { font-size: 0.95em; }
+    }
+    /* 深色主題 */
+    body.dark { --bg: #23272e; --card: #2d323a; }
+    body.dark, body.dark .container, body.dark .day-block {
+      background: var(--bg, #23272e) !important; color: #eee;
+    }
+    body.dark .container, body.dark .day-block { background: var(--card, #2d323a) !important; }
+    body.dark .day-title, body.dark .title { color: #ffe082; }
+    body.dark .routes-table th { background: #2d323a; color: #ffe082; }
+    body.dark .routes-table td, body.dark .day-row input, body.dark .routes-table td input {
+      background: #23272e; color: #eee; border-color: #444;
+    }
+    body.dark .day-row input[readonly] { background: #23272e; color: #aaa; }
+    body.dark .btn, body.dark .add-route-btn, body.dark .remove-route-btn { color: #fff; }
+    body.dark .refuel-label { color: #ffe082; }
+  </style>
+  <script>
+    // 主題切換
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : '');
+      document.querySelectorAll('.theme-toggle').forEach(btn => btn.classList.toggle('dark', document.body.classList.contains('dark')));
+      updateThemeIcon();
+    }
+    function updateThemeIcon() {
+      var icon = document.getElementById('themeIcon');
+      if (!icon) return;
+      icon.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark');
+      updateThemeIcon();
+    });
+  </script>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span> 主題切換
+  </button>
+  <div style="background:#eaf3fb;padding:10px 0 8px 0;text-align:center;font-size:1.08em;letter-spacing:1px;">
+    <a href="employee-schedule.html" style="color:#357abd;text-decoration:none;font-weight:bold;">填寫個人行程</a>
+    |
+    <a href="weekly-schedule-summary.html" style="color:#357abd;text-decoration:none;font-weight:bold;">查看總覽</a>
+  </div>
+  <div class="container">
+    <div class="title"><span class="icon">📝</span>員工個人行程表</div>
+    <div class="select-row" id="userSelectRow"></div>
+    <div class="week-select-row">
+      <span class="week-label">選擇週次：</span>
+      <select class="week-select" id="weekSelect"></select>
+      <button class="btn" onclick="resetAllTables()">重設本週內容</button>
+    </div>
+    <div id="employeeSchedule"></div>
+  </div>
+  <script>
+    // 週次選單產生
+    function getMonday(d) {
+      d = new Date(d);
+      var day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.setDate(diff));
+    }
+    function formatDate(date) { return date.toISOString().slice(0,10); }
+    function getWeekOptions() {
+      const today = new Date();
+      const thisMonday = getMonday(today);
+      const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+      const nextMonday = new Date(thisMonday); nextMonday.setDate(thisMonday.getDate() + 7);
+      return [
+        {label: '上週 ('+formatDate(lastMonday)+')', value: formatDate(lastMonday)},
+        {label: '本週 ('+formatDate(thisMonday)+')', value: formatDate(thisMonday)},
+        {label: '下週 ('+formatDate(nextMonday)+')', value: formatDate(nextMonday)}
+      ];
+    }
+    function renderWeekSelect() {
+      const weekSelect = document.getElementById('weekSelect');
+      weekSelect.innerHTML = '';
+      getWeekOptions().forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        weekSelect.appendChild(option);
+      });
+      const savedWeek = localStorage.getItem('selectedWeek');
+      if (savedWeek) weekSelect.value = savedWeek;
+    }
+    // 員工名單管理
+    function getEmployeeList() {
+      return JSON.parse(localStorage.getItem('employeeList') || 'null') || [
+        {name: '顏嘉宏', tableId: 'table-yan'},
+        {name: '戴誠志', tableId: 'table-dai'},
+        {name: '歐立', tableId: 'table-ou'}
+      ];
+    }
+    function saveEmployeeList(list) {
+      localStorage.setItem('employeeList', JSON.stringify(list));
+    }
+    // 選擇員工
+    function renderUserSelect() {
+      const list = getEmployeeList();
+      const row = document.getElementById('userSelectRow');
+      let html = '<label>選擇員工：</label>';
+      html += '<select id="userSelect">';
+      list.forEach((emp, idx) => {
+        html += `<option value="${emp.tableId}">${emp.name}</option>`;
+      });
+      html += '<option value="__new__">+ 新增員工</option>';
+      html += '</select>';
+      html += '<input id="newUserInput" type="text" placeholder="請輸入新員工姓名" style="display:none;" />';
+      row.innerHTML = html;
+      document.getElementById('userSelect').onchange = function() {
+        if (this.value === '__new__') {
+          document.getElementById('newUserInput').style.display = '';
+        } else {
+          document.getElementById('newUserInput').style.display = 'none';
+          localStorage.setItem('selectedUser', this.value);
+          renderEmployeeSchedule();
+        }
+      };
+      document.getElementById('newUserInput').onchange = function() {
+        const name = this.value.trim();
+        if (!name) return;
+        const list = getEmployeeList();
+        const newId = 'table-' + Math.random().toString(36).slice(2,8);
+        list.push({name, tableId: newId});
+        saveEmployeeList(list);
+        localStorage.setItem('selectedUser', newId);
+        renderUserSelect();
+        renderEmployeeSchedule();
+      };
+      // 預設選擇
+      const selectedUser = localStorage.getItem('selectedUser') || list[0].tableId;
+      document.getElementById('userSelect').value = selectedUser;
+    }
+    // 行程資料管理
+    function getTableKey(tableId) {
+      const week = document.getElementById('weekSelect').value;
+      return tableId + '-' + week;
+    }
+    function getWeekDates(mondayStr) {
+      const days = ['(週一)','(週二)','(週三)','(週四)','(週五)'];
+      const monday = new Date(mondayStr);
+      return days.map((d, i) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
+        return `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${d}`;
+      });
+    }
+    function getDefaultDayData(dateStr) {
+      return {
+        date: dateStr,
+        start: '08:30',
+        end: '18:00',
+        car: '',
+        carStartKm: '',
+        carEndKm: '',
+        refuel: false,
+        refuelKm: '',
+        refuelLiters: '',
+        routes: [ {customer: '', content: ''} ]
+      };
+    }
+    function getDefaultTableData(weekMonday) {
+      const dates = getWeekDates(weekMonday);
+      return dates.map(date => getDefaultDayData(date));
+    }
+    function saveTable(tableId, data) {
+      localStorage.setItem(getTableKey(tableId), JSON.stringify(data));
+    }
+    function loadTable(tableId) {
+      const week = document.getElementById('weekSelect').value;
+      const key = getTableKey(tableId);
+      let data = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!data) data = getDefaultTableData(week);
+      return data;
+    }
+    function resetAllTables() {
+      const week = document.getElementById('weekSelect').value;
+      const tableId = localStorage.getItem('selectedUser') || getEmployeeList()[0].tableId;
+      localStorage.removeItem(tableId + '-' + week);
+      renderEmployeeSchedule();
+    }
+    // 行程填寫區塊
+    function renderEmployeeSchedule() {
+      const tableId = localStorage.getItem('selectedUser') || getEmployeeList()[0].tableId;
+      const week = document.getElementById('weekSelect').value;
+      const weekData = loadTable(tableId);
+      const container = document.getElementById('employeeSchedule');
+      container.innerHTML = '';
+      weekData.forEach((day, dayIdx) => {
+        const dayBlock = document.createElement('div');
+        dayBlock.className = 'day-block';
+        // 標題
+        const dayTitle = document.createElement('div');
+        dayTitle.className = 'day-title';
+        dayTitle.textContent = day.date;
+        dayBlock.appendChild(dayTitle);
+        // 出勤、回公司、車牌、出發/回來公里數、公里數
+        const row1 = document.createElement('div');
+        row1.className = 'day-row';
+        const carStart = day.carStartKm || '';
+        const carEnd = day.carEndKm || '';
+        let km = '';
+        if (carStart !== '' && carEnd !== '' && !isNaN(carStart) && !isNaN(carEnd)) {
+          km = Number(carEnd) - Number(carStart);
+          if (isNaN(km)) km = '';
+        }
+        row1.innerHTML = `
+          <label>出勤時間</label><input type="text" value="${day.start}" onchange="onDayFieldChange('${tableId}',${dayIdx},'start',this.value)">
+          <label>回公司時間</label><input type="text" value="${day.end}" onchange="onDayFieldChange('${tableId}',${dayIdx},'end',this.value)">
+          <label>車牌</label><input type="text" value="${day.car}" onchange="onDayFieldChange('${tableId}',${dayIdx},'car',this.value)">
+        </div>
+        <div class='day-row'>
+          <label>出發公里數</label><input type="number" value="${carStart}" onchange="onDayFieldChange('${tableId}',${dayIdx},'carStartKm',this.value)">
+          <label>回來公里數</label><input type="number" value="${carEnd}" onchange="onDayFieldChange('${tableId}',${dayIdx},'carEndKm',this.value)">
+          <label>公里數</label><input type="text" value="${km}" readonly style="background:#f4f6fa;color:#888;">
+          <label style='margin-left:16px;'><input type="checkbox" ${day.refuel ? 'checked' : ''} onchange="onDayFieldChange('${tableId}',${dayIdx},'refuel',this.checked)"> 今日有加油</label>
+          ${day.refuel ? `<label style='margin-left:8px;'>加油時公里數</label><input type='number' value='${day.refuelKm || ''}' onchange="onDayFieldChange('${tableId}',${dayIdx},'refuelKm',this.value)">
+          <label>加油公升數</label><input type='number' value='${day.refuelLiters || ''}' onchange="onDayFieldChange('${tableId}',${dayIdx},'refuelLiters',this.value)">` : ''}
+        `;
+        dayBlock.appendChild(row1);
+        // 行程表
+        const routesTable = document.createElement('table');
+        routesTable.className = 'routes-table';
+        routesTable.innerHTML = '<thead><tr><th>客戶</th><th>內容</th><th>操作</th></tr></thead>';
+        const tbody = document.createElement('tbody');
+        // 移除多餘空白行，只保留一個
+        let filteredRoutes = day.routes.filter((r, idx, arr) => idx === arr.length - 1 || r.customer || r.content);
+        // 確保最後一行是空白
+        const lastRoute = filteredRoutes[filteredRoutes.length - 1];
+        if (lastRoute && (lastRoute.customer || lastRoute.content)) {
+          filteredRoutes.push({customer: '', content: ''});
+        }
+        day.routes = filteredRoutes;
+        filteredRoutes.forEach((route, routeIdx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="text" value="${route.customer}" onchange="onRouteChange('${tableId}',${dayIdx},${routeIdx},'customer',this.value)"></td>
+            <td><input type="text" value="${route.content}" onchange="onRouteChange('${tableId}',${dayIdx},${routeIdx},'content',this.value)"></td>
+            <td>
+              <button class="remove-route-btn" onclick="removeRoute('${tableId}',${dayIdx},${routeIdx})">刪除</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        routesTable.appendChild(tbody);
+        dayBlock.appendChild(routesTable);
+        container.appendChild(dayBlock);
+      });
+    }
+    // 行程操作
+    window.onDayFieldChange = function(tableId, dayIdx, field, value) {
+      const data = loadTable(tableId);
+      data[dayIdx][field] = value;
+      saveTable(tableId, data);
+      renderEmployeeSchedule();
+    }
+    window.onRouteChange = function(tableId, dayIdx, routeIdx, field, value) {
+      const data = loadTable(tableId);
+      data[dayIdx].routes[routeIdx][field] = value;
+      // 優化：只要最後一行有內容，立即補一個空白行，且只保留一個空白行
+      let routes = data[dayIdx].routes;
+      // 移除多餘空白行，只保留一個
+      routes = routes.filter((r, idx, arr) => idx === arr.length - 1 || r.customer || r.content);
+      // 若最後一行有內容，補一個空白行
+      const last = routes[routes.length - 1];
+      if (last && (last.customer || last.content)) {
+        routes.push({customer: '', content: ''});
+      }
+      data[dayIdx].routes = routes;
+      saveTable(tableId, data);
+      renderEmployeeSchedule();
+    }
+    window.addRoute = function(tableId, dayIdx) {
+      const data = loadTable(tableId);
+      data[dayIdx].routes.push({customer: '', content: ''});
+      saveTable(tableId, data);
+      renderEmployeeSchedule();
+    }
+    window.removeRoute = function(tableId, dayIdx, routeIdx) {
+      const data = loadTable(tableId);
+      if (data[dayIdx].routes.length <= 1) return;
+      data[dayIdx].routes.splice(routeIdx, 1);
+      // 優化：刪除後只保留一個空白行
+      let routes = data[dayIdx].routes;
+      routes = routes.filter((r, idx, arr) => idx === arr.length - 1 || r.customer || r.content);
+      const last = routes[routes.length - 1];
+      if (!last || last.customer || last.content) {
+        routes.push({customer: '', content: ''});
+      }
+      data[dayIdx].routes = routes;
+      saveTable(tableId, data);
+      renderEmployeeSchedule();
+    }
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      renderUserSelect();
+      renderWeekSelect();
+      renderEmployeeSchedule();
+      document.getElementById('weekSelect').addEventListener('change', function() {
+        localStorage.setItem('selectedWeek', this.value);
+        renderEmployeeSchedule();
+      });
+    });
+  </script>
+</body>
+</html> 
