@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>每週行程總覽</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", sans-serif;
+      background: var(--bg, #f4f6fa);
+      margin: 0; padding: 0;
+      transition: background 0.3s;
+    }
+    .theme-toggle {
+      position: fixed; top: 16px; right: 24px; z-index: 10;
+      background: #fff; border: 1px solid #e3e8f0; border-radius: 20px;
+      padding: 6px 18px; font-size: 1em; color: #357abd; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(74,144,226,0.08);
+      transition: background 0.2s, color 0.2s;
+    }
+    .theme-toggle.dark { background: #222; color: #ffe082; border-color: #444; }
+    .container {
+      max-width: 1400px; width: 90vw; margin: 40px auto 32px auto;
+      background: var(--card, #fff);
+      border-radius: 18px;
+      box-shadow: 0 4px 24px rgba(74,144,226,0.13);
+      padding: 36px 18px 28px 18px;
+      transition: background 0.3s;
+    }
+    .title {
+      font-size: 1.6em; font-weight: bold; color: #357abd;
+      margin-bottom: 18px; letter-spacing: 1px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .title .icon {
+      font-size: 1.2em; color: #4a90e2;
+    }
+    .week-select-row {
+      display: flex; align-items: center; justify-content: flex-end; margin-bottom: 18px; gap: 10px;
+    }
+    .week-label { font-size: 1em; color: #2d3e50; font-weight: 500; }
+    .week-select {
+      font-size: 1em; padding: 4px 10px; border-radius: 5px; border: 1px solid #b0c4d8; background: #fff; color: #2d3e50;
+    }
+    .pro-summary-employee {
+      background: var(--card, #fff);
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(74,144,226,0.15);
+      margin-bottom: 48px;
+      padding: 0 0 24px 0;
+      overflow-x: auto;
+      transition: background 0.3s;
+    }
+    .pro-summary-title {
+      font-size: 1.35em; font-weight: bold; color: #357abd;
+      padding: 24px 0 14px 32px; border-bottom: 2px solid #e3e8f0; letter-spacing: 1px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .pro-summary-title .icon { font-size: 1.1em; }
+    .pro-summary-table {
+      width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; background: #f9fbfd; border-radius: 0 0 20px 20px; overflow: hidden;
+    }
+    .pro-summary-table th, .pro-summary-table td {
+      border: 1.5px solid #e3e8f0; padding: 18px 12px; text-align: left; font-size: 1.13em; vertical-align: top;
+      background: #f9fbfd;
+      transition: background 0.2s;
+    }
+    .pro-summary-table th {
+      background: #eaf3fb; color: #357abd; font-weight: 700; text-align: center; font-size: 1.18em; letter-spacing: 1px;
+    }
+    .pro-summary-table tr:hover td { background: #f0f7ff; }
+    .pro-summary-daycell {
+      min-width: 220px; background: #fff; border-radius: 0 0 12px 12px; padding-bottom: 10px;
+      font-size: 1.08em;
+    }
+    .pro-summary-routes { margin-bottom: 12px; }
+    .pro-summary-route {
+      margin-bottom: 6px; padding: 4px 0 4px 0; border-left: 4px solid #4a90e2;
+      background: #f4f8ff; border-radius: 0 6px 6px 0; font-size: 1.08em; color: #2d3e50; padding-left: 12px;
+      display: flex; align-items: flex-start; gap: 10px;
+      line-height: 1.7;
+    }
+    .pro-summary-route b { font-weight: 700; color: #357abd; margin-right: 4px; }
+    .pro-summary-meta {
+      font-size: 1.05em; color: #666; margin-top: 10px; border-top: 1.5px dashed #e3e8f0; padding-top: 8px; line-height: 2.1;
+    }
+    .pro-summary-meta b { color: #357abd; font-weight: 700; margin-right: 4px; }
+    .pro-summary-refuel {
+      color: #e67e22; font-weight: bold; font-size: 1.13em; margin-top: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pro-summary-refuel-detail { font-size: 1.05em; font-weight: normal; color: #e67e22; margin-left: 4px; }
+    @media (max-width: 900px) {
+      .pro-summary-table th, .pro-summary-table td { font-size: 1.05em; } .pro-summary-daycell { min-width: 140px; }
+    }
+    @media (max-width: 700px) {
+      .pro-summary-title { font-size: 1.08em; padding-left: 10px; }
+      .pro-summary-table, .pro-summary-table thead, .pro-summary-table tbody, .pro-summary-table tr { display: block; width: 100%; }
+      .pro-summary-table th { display: none; }
+      .pro-summary-table td.pro-summary-daycell {
+        display: block;
+        min-width: unset;
+        width: 96%;
+        margin: 0 auto 18px auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(74,144,226,0.10);
+        padding: 18px 12px 14px 12px;
+        font-size: 1.08em;
+        border: 1.5px solid #e3e8f0;
+      }
+      .pro-summary-table td:not(.pro-summary-daycell) { display: none; }
+      .pro-summary-table tr { margin-bottom: 18px; }
+      .pro-summary-employee { padding: 0 0 10px 0; }
+    }
+    /* 深色主題 */
+    body.dark { --bg: #23272e; --card: #2d323a; }
+    body.dark, body.dark .container, body.dark .pro-summary-employee {
+      background: var(--bg, #23272e) !important; color: #eee;
+    }
+    body.dark .container, body.dark .pro-summary-employee { background: var(--card, #2d323a) !important; }
+    body.dark .pro-summary-title, body.dark .title { color: #ffe082; }
+    body.dark .pro-summary-table th { background: #2d323a; color: #ffe082; }
+    body.dark .pro-summary-table td { background: #23272e; color: #eee; border-color: #444; }
+    body.dark .pro-summary-meta { color: #aaa; }
+    body.dark .pro-summary-refuel, body.dark .pro-summary-refuel-detail { color: #ffe082; }
+  </style>
+  <script>
+    function getMonday(d) { d = new Date(d); var day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); return new Date(d.setDate(diff)); }
+    function formatDate(date) { return date.toISOString().slice(0,10); }
+    function getWeekOptions() {
+      const today = new Date();
+      const thisMonday = getMonday(today);
+      const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+      const nextMonday = new Date(thisMonday); nextMonday.setDate(thisMonday.getDate() + 7);
+      return [
+        {label: '上週 ('+formatDate(lastMonday)+')', value: formatDate(lastMonday)},
+        {label: '本週 ('+formatDate(thisMonday)+')', value: formatDate(thisMonday)},
+        {label: '下週 ('+formatDate(nextMonday)+')', value: formatDate(nextMonday)}
+      ];
+    }
+    function renderWeekSelect() {
+      const weekSelect = document.getElementById('weekSelect');
+      weekSelect.innerHTML = '';
+      getWeekOptions().forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        weekSelect.appendChild(option);
+      });
+      const savedWeek = localStorage.getItem('selectedWeek');
+      if (savedWeek) weekSelect.value = savedWeek;
+    }
+    function getEmployeeList() {
+      return JSON.parse(localStorage.getItem('employeeList') || 'null') || [
+        {name: '顏嘉宏', tableId: 'table-yan'},
+        {name: '戴誠志', tableId: 'table-dai'},
+        {name: '歐立', tableId: 'table-ou'}
+      ];
+    }
+    function getTableKey(tableId) {
+      const week = document.getElementById('weekSelect').value;
+      return tableId + '-' + week;
+    }
+    function getWeekDates(mondayStr) {
+      const days = ['(週一)','(週二)','(週三)','(週四)','(週五)'];
+      const monday = new Date(mondayStr);
+      return days.map((d, i) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
+        return `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${d}`;
+      });
+    }
+    function getDefaultDayData(dateStr) {
+      return {
+        date: dateStr,
+        start: '',
+        end: '',
+        car: '',
+        carStartKm: '',
+        carEndKm: '',
+        routes: [ {customer: '', content: ''} ]
+      };
+    }
+    function getDefaultTableData(weekMonday) {
+      const dates = getWeekDates(weekMonday);
+      return dates.map(date => getDefaultDayData(date));
+    }
+    function loadTable(tableId) {
+      const week = document.getElementById('weekSelect').value;
+      const key = getTableKey(tableId);
+      let data = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!data) data = getDefaultTableData(week);
+      return data;
+    }
+    // 專業橫向週表總覽
+    function renderSummaryBlock() {
+      const list = getEmployeeList();
+      const weekDates = getWeekDates(document.getElementById('weekSelect').value);
+      let html = '';
+      list.forEach(emp => {
+        const weekData = loadTable(emp.tableId);
+        html += `<div class="pro-summary-employee">`;
+        html += `<div class="pro-summary-title"><span class='icon'>👤</span>${emp.name} 的本週行程</div>`;
+        html += `<table class="pro-summary-table"><thead><tr>`;
+        weekDates.forEach(date => {
+          html += `<th>${date}</th>`;
+        });
+        html += `</tr></thead><tbody><tr>`;
+        weekData.forEach(day => {
+          html += `<td class="pro-summary-daycell">`;
+          // 行程
+          if (day.routes && day.routes.length > 0 && day.routes.some(r => r.customer || r.content)) {
+            html += `<div class="pro-summary-routes">`;
+            day.routes.forEach(route => {
+              if (route.customer || route.content) {
+                html += `<div class="pro-summary-route">`;
+                if (route.customer) html += `<b>客戶：</b>${route.customer}<br/>`;
+                if (route.content) html += `<b>內容：</b>${route.content}`;
+                html += `</div>`;
+              }
+            });
+            html += `</div>`;
+          } else {
+            html += `<div style="color:#bbb;font-size:0.95em;">（無行程）</div>`;
+          }
+          // meta
+          let km = '';
+          const carStart = day.carStartKm || '';
+          const carEnd = day.carEndKm || '';
+          if (carStart !== '' && carEnd !== '' && !isNaN(carStart) && !isNaN(carEnd)) {
+            km = Number(carEnd) - Number(carStart);
+            if (isNaN(km)) km = '';
+          }
+          html += `<div class="pro-summary-meta">`;
+          html += `🚗出勤：${day.start || '-'}<br/>🏁回公司：${day.end || '-'}<br/>🔖車牌：${day.car || '-'}<br/>📍出發公里數：${carStart || '-'}<br/>🏁回來公里數：${carEnd || '-'}<br/>📏公里數：${km === '' ? '-' : km}`;
+          html += `</div>`;
+          if (day.refuel) {
+            html += `<div class="pro-summary-refuel"><span class='icon'>⛽</span>已加油`;
+            if(day.refuelKm || day.refuelLiters) {
+              html += `<span class='pro-summary-refuel-detail'>公里數：${day.refuelKm || '-'}，公升：${day.refuelLiters || '-'}</span>`;
+            }
+            html += `</div>`;
+          }
+          html += `</td>`;
+        });
+        html += `</tr></tbody></table></div>`;
+      });
+      document.getElementById('summaryBlock').innerHTML = html;
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      renderWeekSelect();
+      renderSummaryBlock();
+      document.getElementById('weekSelect').addEventListener('change', function() {
+        localStorage.setItem('selectedWeek', this.value);
+        renderSummaryBlock();
+      });
+      if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark');
+      updateThemeIcon();
+      // 公里數彙整按鈕事件安全綁定
+      var btn = document.getElementById('mileageSummaryBtn');
+      var modal = document.getElementById('mileageSummaryModal');
+      var closeBtn = document.getElementById('closeMileageSummary');
+      if(btn && modal && closeBtn) {
+        btn.onclick = function() {
+          renderMileageSummary();
+          modal.style.display = 'flex';
+        };
+        closeBtn.onclick = function() {
+          modal.style.display = 'none';
+        };
+        modal.onclick = function(e) {
+          if (e.target === modal) modal.style.display = 'none';
+        };
+      }
+      var exportBtn = document.getElementById('exportMileageExcel');
+      if(exportBtn) {
+        exportBtn.onclick = function() {
+          // 取得表格資料
+          var table = document.getElementById('mileageSummaryTable').querySelector('table');
+          if(!table) return;
+          var wb = XLSX.utils.table_to_book(table, {sheet: "公里數彙整"});
+          XLSX.writeFile(wb, '公里數彙整.xlsx');
+        }
+      }
+      // 查詢按鈕事件
+      var queryBtn = document.getElementById('mileageQueryBtn');
+      if(queryBtn) {
+        queryBtn.onclick = function() {
+          renderMileageSummary();
+        }
+      }
+      // 初次載入自動查詢
+      renderMileageSummary();
+    });
+    // 主題切換
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : '');
+      document.querySelectorAll('.theme-toggle').forEach(btn => btn.classList.toggle('dark', document.body.classList.contains('dark')));
+      updateThemeIcon();
+    }
+    function updateThemeIcon() {
+      var icon = document.getElementById('themeIcon');
+      if (!icon) return;
+      icon.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    }
+    // 取得本月所有週一日期
+    function getAllMondaysOfMonth(year, month) {
+      let mondays = [];
+      let date = new Date(year, month, 1);
+      // 找到第一個週一
+      while (date.getDay() !== 1) { date.setDate(date.getDate() + 1); }
+      while (date.getMonth() === month) {
+        mondays.push(new Date(date));
+        date.setDate(date.getDate() + 7);
+      }
+      return mondays;
+    }
+    // 取得本月所有日期字串
+    function getAllDatesOfMonth(year, month) {
+      let dates = [];
+      let date = new Date(year, month, 1);
+      while (date.getMonth() === month) {
+        dates.push(`${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()}`);
+        date.setDate(date.getDate() + 1);
+      }
+      return dates;
+    }
+    // 公里數彙整功能（依自訂區間）
+    function renderMileageSummary() {
+      const list = getEmployeeList();
+      // 取得區間
+      let start = document.getElementById('mileageStartDate').value;
+      let end = document.getElementById('mileageEndDate').value;
+      if (!start || !end) {
+        // 預設本月1號~月底
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        start = `${year}-${String(month+1).padStart(2,'0')}-01`;
+        // 找月底
+        const lastDay = new Date(year, month+1, 0).getDate();
+        end = `${year}-${String(month+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+        document.getElementById('mileageStartDate').value = start;
+        document.getElementById('mileageEndDate').value = end;
+      }
+      // 轉成 YYYY/MM/DD
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      let rows = [];
+      list.forEach(emp => {
+        // 搜尋所有週的資料
+        for(let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
+          for(let m = (y===startDate.getFullYear()?startDate.getMonth():0); m <= (y===endDate.getFullYear()?endDate.getMonth():11); m++) {
+            // 找出該月所有週一
+            const mondays = getAllMondaysOfMonth(y, m);
+            mondays.forEach(monday => {
+              const weekMondayStr = monday.toISOString().slice(0,10);
+              const weekData = (function(){
+                const key = emp.tableId + '-' + weekMondayStr;
+                let data = JSON.parse(localStorage.getItem(key) || 'null');
+                if (!data) return [];
+                return data;
+              })();
+              weekData.forEach(day => {
+                if (!day || !day.date) return;
+                // 只取區間內
+                const d = new Date(day.date.replace(/\/(\d{1,2})\//, '/$1/')); // 2024/6/1 (週六)
+                if (d < startDate || d > endDate) return;
+                const carStart = day.carStartKm || '';
+                const carEnd = day.carEndKm || '';
+                let mileage = '';
+                if (carStart !== '' && carEnd !== '' && !isNaN(carStart) && !isNaN(carEnd)) {
+                  mileage = Number(carEnd) - Number(carStart);
+                  if (isNaN(mileage)) mileage = '';
+                }
+                let refuelKm = day.refuel ? (day.refuelKm || '') : '';
+                let refuelLiters = day.refuel ? (day.refuelLiters || '') : '';
+                rows.push({
+                  emp: emp.name,
+                  date: day.date,
+                  carStart,
+                  carEnd,
+                  mileage,
+                  refuelKm,
+                  refuelLiters
+                });
+              });
+            });
+          }
+        }
+      });
+      let html = `<table style='width:100%;border-collapse:collapse;font-size:1em;'>`;
+      html += `<thead><tr style='background:#eaf3fb;color:#357abd;'><th style='padding:8px 6px;border:1px solid #e3e8f0;'>員工</th><th style='padding:8px 6px;border:1px solid #e3e8f0;'>日期</th><th style='padding:8px 6px;border:1px solid #e3e8f0;'>出發公里數</th><th style='padding:8px 6px;border:1px solid #e3e8f0;'>回來公里數</th><th style='padding:8px 6px;border:1px solid #e3e8f0;'>行駛公里數</th><th style='padding:8px 6px;border:1px solid #e3e8f0;'>加油公里數</th><th style='padding:8px 6px;border:1px solid #e3e8f0;'>加油公升數</th></tr></thead><tbody>`;
+      rows.forEach(r => {
+        html += `<tr>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.emp}</td>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.date}</td>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.carStart}</td>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.carEnd}</td>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.mileage === '' ? '-' : r.mileage}</td>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.refuelKm || ''}</td>`;
+        html += `<td style='padding:6px 6px;border:1px solid #e3e8f0;'>${r.refuelLiters || ''}</td>`;
+        html += `</tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById('mileageSummaryTable').innerHTML = html;
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span> 主題切換
+  </button>
+  <div style="background:#eaf3fb;padding:10px 0 8px 0;text-align:center;font-size:1.08em;letter-spacing:1px;">
+    <a href="employee-schedule.html" style="color:#357abd;text-decoration:none;font-weight:bold;">填寫個人行程</a>
+    |
+    <a href="weekly-schedule-summary.html" style="color:#357abd;text-decoration:none;font-weight:bold;">查看總覽</a>
+  </div>
+  <div class="container">
+    <div class="title"><span class="icon">📊</span>每週行程總覽</div>
+    <div class="week-select-row">
+      <span class="week-label">選擇週次：</span>
+      <select class="week-select" id="weekSelect"></select>
+      <button id="mileageSummaryBtn" style="margin-left:18px;padding:6px 16px;border-radius:8px;background:#357abd;color:#fff;border:none;font-size:1em;cursor:pointer;box-shadow:0 2px 8px rgba(74,144,226,0.08);transition:background 0.2s;">公里數彙整</button>
+    </div>
+    <div id="summaryBlock"></div>
+  </div>
+  <!-- 公里數彙整視窗 -->
+  <div id="mileageSummaryModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(40,60,90,0.18);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;min-width:320px;max-width:90vw;max-height:80vh;overflow:auto;border-radius:16px;box-shadow:0 8px 32px rgba(74,144,226,0.18);padding:32px 24px 24px 24px;position:relative;">
+      <button id="closeMileageSummary" style="position:absolute;top:12px;right:18px;font-size:1.3em;background:none;border:none;cursor:pointer;color:#357abd;">✖</button>
+      <div style="font-size:1.18em;font-weight:bold;color:#357abd;margin-bottom:18px;letter-spacing:1px;display:flex;align-items:center;gap:8px;"><span>🚗</span>公里數彙整</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <label>起始日期 <input type="date" id="mileageStartDate"></label>
+        <label>結束日期 <input type="date" id="mileageEndDate"></label>
+        <button id="mileageQueryBtn" style="padding:6px 16px;border-radius:8px;background:#357abd;color:#fff;border:none;font-size:1em;cursor:pointer;">查詢</button>
+      </div>
+      <div id="mileageSummaryTable"></div>
+      <button id="exportMileageExcel" style="margin-top:18px;padding:7px 18px;border-radius:8px;background:#4a90e2;color:#fff;border:none;font-size:1em;cursor:pointer;box-shadow:0 2px 8px rgba(74,144,226,0.08);transition:background 0.2s;">匯出 Excel</button>
+    </div>
+  </div>
+</body>
+</html> 
